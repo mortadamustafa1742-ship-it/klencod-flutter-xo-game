@@ -48,6 +48,18 @@ jobs:
           echo "Flutter project folder: $DIR"
           echo "dir=$DIR" >> "$GITHUB_OUTPUT"
 
+      # يرتب الملفات تلقائياً إذا انرفعت بالجذر بدون مجلدات
+      - name: Arrange files
+        working-directory: ${{ steps.proj.outputs.dir }}
+        run: |
+          if [ ! -f lib/main.dart ] && [ -f main.dart ]; then mkdir -p lib && mv main.dart lib/main.dart; fi
+          if [ ! -f assets/index.html ] && [ -f index.html ]; then mkdir -p assets && mv index.html assets/index.html; fi
+          if [ ! -f lib/main.dart ]; then
+            echo "::error::lib/main.dart is missing. Files in the project folder:"
+            ls -la
+            exit 1
+          fi
+
       # إذا مجلد android غير موجود يتم إنشاؤه
       - name: Create Android files if missing
         working-directory: ${{ steps.proj.outputs.dir }}
@@ -56,6 +68,9 @@ jobs:
             echo "android/ folder missing - generating it"
             flutter create --platforms=android .
           fi
+          # صلاحية الإنترنت (للخطوط والروابط)
+          MF=android/app/src/main/AndroidManifest.xml
+          grep -q 'android.permission.INTERNET' "$MF" || sed -i 's|<application|<uses-permission android:name="android.permission.INTERNET"/>\n    <application|' "$MF"
 
       - name: Get dependencies
         working-directory: ${{ steps.proj.outputs.dir }}
